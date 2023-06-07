@@ -1,11 +1,11 @@
 -- DAU
 select from_unixtime(players.hour-60*60*24, 'yyyy-MM-dd') as period,
 	count(players.event_user) as dau
-from main_day.seg_players_3426_pq players
+from main_day.seg_players_fls_gp players
 where players.hour between unix_timestamp('2023-05-01')+60*60*24 and unix_timestamp('2023-05-31')+60*60*24
-	and players.last_active/1000 between players.hour-60*60*24 and players.hour
-group by from_unixtime(players.hour-60*60*24, 'yyyy-MM-dd')
-order by from_unixtime(players.hour-60*60*24, 'yyyy-MM-dd')
+	and players.last_active/1000 between players.hour-60*60*24 and players.hour - 1
+group by hour
+order by hour
 
 
 -- MAU total
@@ -47,12 +47,12 @@ with dau as (
 		count(players.event_user) as dau
 	from main_day.seg_players_3426_pq players
 	where players.hour between unix_timestamp('2023-05-01')+60*60*24 and unix_timestamp('2023-05-31')+60*60*24
-		and players.last_active/1000 between players.hour-60*60*24 and players.hour
-	group by from_unixtime(players.hour-60*60*24, 'yyyy-MM-dd')
+		and players.last_active/1000 between players.hour-60*60*24 and players.hour-1
+	group by hour
 	)
 	, revenue as (
 	select from_unixtime(payments.day, 'yyyy-MM-dd') as period,
-		sum(payments.offer_price) as revenue
+		sum(payments.offer_price)*0.66 as revenue
 	from main_day.valid_iap_3426_pq payments
 	where payments.day between unix_timestamp('2023-05-01') and unix_timestamp('2023-05-31')
 	group by from_unixtime(payments.day, 'yyyy-MM-dd')
@@ -79,8 +79,8 @@ group by from_unixtime(payments.day, 'yyyy-MM-dd')
 order by from_unixtime(payments.day, 'yyyy-MM-dd')
 
 
--- скорость игроков
--- количество пройденных уровней за единицу времени (день) на игрока
+-- Г±ГЄГ®Г°Г®Г±ГІГј ГЁГЈГ°Г®ГЄГ®Гў
+-- ГЄГ®Г«ГЁГ·ГҐГ±ГІГўГ® ГЇГ°Г®Г©Г¤ГҐГ­Г­Г»Гµ ГіГ°Г®ГўГ­ГҐГ© Г§Г  ГҐГ¤ГЁГ­ГЁГ¶Гі ГўГ°ГҐГ¬ГҐГ­ГЁ (Г¤ГҐГ­Гј) Г­Г  ГЁГЈГ°Г®ГЄГ 
 with levels_passed as (
 	select attempts.event_user,
 		from_unixtime(cast(attempts.event_time/1000 as bigint), 'yyyy-MM-dd') as period,
@@ -98,7 +98,7 @@ group by levels_passed.period
 order by levels_passed.period
 
 
--- количество попыток за единицу времени (день) на игрока
+-- ГЄГ®Г«ГЁГ·ГҐГ±ГІГўГ® ГЇГ®ГЇГ»ГІГ®ГЄ Г§Г  ГҐГ¤ГЁГ­ГЁГ¶Гі ГўГ°ГҐГ¬ГҐГ­ГЁ (Г¤ГҐГ­Гј) Г­Г  ГЁГЈГ°Г®ГЄГ 
 with attempts as (
 	select attempts.event_user,
 		from_unixtime(cast(attempts.event_time/1000 as bigint), 'yyyy-MM-dd') as period,
